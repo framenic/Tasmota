@@ -620,6 +620,18 @@ char* GetPowerDevice(char* dest, uint32_t idx, size_t size)
   return GetPowerDevice(dest, idx, size, 0);
 }
 
+char* GetPowertimerDevice(char* dest, uint32_t idx, size_t size, uint32_t option)
+{
+  strncpy_P(dest, S_RSLT_POWERTIMER, size);                // POWERTIMER
+  if ((TasmotaGlobal.devices_present + option) > 1) {
+    char sidx[8];
+    snprintf_P(sidx, sizeof(sidx), PSTR("%d"), idx);  // x
+    strncat(dest, sidx, size - strlen(dest) -1);      // POWERTIMERx
+  }
+  return dest;
+}
+
+
 void GetEspHardwareType(void)
 {
 #ifdef ESP8266

@@ -88,7 +88,10 @@ struct {
   uint32_t loop_load_avg;                   // Indicative loop load average
   uint32_t web_log_index;                   // Index in Web log buffer
   uint32_t uptime;                          // Counting every second until 4294967295 = 130 year
-
+  
+  uint32_t power_timer[MAX_POWERTIMERS];    // Power off timer
+  uint32_t power_timer_lastpub[MAX_POWERTIMERS];    // Power off timer last publlished
+  
   power_t power;                            // Current copy of Settings.power
   power_t rel_inverted;                     // Relay inverted flag (1 = (0 = On, 1 = Off))
   power_t last_power;                       // Last power set state

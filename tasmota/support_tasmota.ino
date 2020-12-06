@@ -247,6 +247,7 @@ void RestorePower(bool publish_power, uint32_t source)
     SetDevicePower(TasmotaGlobal.power, source);
     if (publish_power) {
       MqttPublishAllPowerState();
+	  MqttPublishAllPowertimerState();
     }
   }
 }
@@ -434,6 +435,21 @@ uint32_t GetPulseTimer(uint32_t index)
   return 0;
 }
 
+void SetPowerTimer(uint32_t index, uint32_t time)
+{
+  TasmotaGlobal.power_timer[index] = millis() + (60000 * time);
+}
+
+uint32_t GetPowerTimer(uint32_t index)
+{
+  long time = TimePassedSince(TasmotaGlobal.power_timer[index]);
+  if (time < 0) {
+    time *= -1;
+    return ((time / 60000)+1);
+  }
+  return 0;
+}
+
 /********************************************************************************************/
 
 bool SendKey(uint32_t key, uint32_t device, uint32_t state)
@@ -572,12 +588,14 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
     switch (state) {
     case POWER_OFF: {
       TasmotaGlobal.power &= (POWER_MASK ^ mask);
+	  TasmotaGlobal.power_timer[device-1] = 0L; // disable powertimer
       break; }
     case POWER_ON:
       TasmotaGlobal.power |= mask;
       break;
     case POWER_TOGGLE:
       TasmotaGlobal.power ^= mask;
+	  TasmotaGlobal.power_timer[device-1] = 0L; // disable powertimer
     }
 #ifdef USE_DEVICE_GROUPS
     if (SRC_REMOTE != source && SRC_RETRY != source) {
@@ -623,6 +641,7 @@ void ExecuteCommandPower(uint32_t device, uint32_t state, uint32_t source)
   }
   if (publish_power) {
     MqttPublishPowerState(device);
+	MqttPublishPowertimerState(device);
   }
 }
 
@@ -907,6 +926,19 @@ void Every100mSeconds(void)
         TasmotaGlobal.pulse_timer[i] = 0L;              // Turn off this timer
         for (uint32_t j = 0; j < TasmotaGlobal.devices_present; j = j +MAX_PULSETIMERS) {
           ExecuteCommandPower(i + j +1, (POWER_ALL_OFF_PULSETIME_ON == Settings.poweronstate) ? POWER_ON : POWER_OFF, SRC_PULSETIMER);
+        }
+      }
+    }
+  }
+  
+  for (uint32_t i = 0; i < MAX_POWERTIMERS; i++) {
+    if (TasmotaGlobal.power_timer[i] != 0L) {           // Timer active?
+	  if (GetPowerTimer(i)!=TasmotaGlobal.power_timer_lastpub[i]) MqttPublishPowertimerState(i+1);
+
+      if (TimeReached(TasmotaGlobal.power_timer[i])) {  // Timer finished?
+        TasmotaGlobal.power_timer[i] = 0L;              // Turn off this timer
+        for (uint32_t j = 0; j < TasmotaGlobal.devices_present; j = j +MAX_POWERTIMERS) {
+          ExecuteCommandPower(i + j +1, POWER_OFF, SRC_POWERTIMER);
         }
       }
     }

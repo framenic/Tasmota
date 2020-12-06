@@ -457,6 +457,35 @@ void MqttPublishAllPowerState(void)
   }
 }
 
+void MqttPublishPowertimerState(uint32_t device)
+{
+  char stopic[TOPSZ];
+  char scommand[33];
+
+  if ((device < 1) || (device > TasmotaGlobal.devices_present)) { device = 1; }
+
+    GetPowertimerDevice(scommand, device, sizeof(scommand), Settings.flag.device_index_enable);           // SetOption26 - Switch between POWER or POWER1
+    GetTopic_P(stopic, STAT, TasmotaGlobal.mqtt_topic, (Settings.flag.mqtt_response) ? scommand : S_RSLT_RESULT);  // SetOption4 - Switch between MQTT RESULT or COMMAND
+    
+	TasmotaGlobal.power_timer_lastpub[device-1] = GetPowerTimer(device -1);
+	
+	Response_P(S_JSON_COMMAND_LVALUE, scommand, TasmotaGlobal.power_timer_lastpub[device-1]);
+    MqttPublish(stopic);
+
+    if (!Settings.flag4.only_json_message) {  // SetOption90 - Disable non-json MQTT response
+      GetTopic_P(stopic, STAT, TasmotaGlobal.mqtt_topic, scommand);
+      Response_P(PSTR("%lu"),TasmotaGlobal.power_timer_lastpub[device-1]);
+      MqttPublish(stopic, Settings.flag.mqtt_power_retain);  // CMND_POWERRETAIN
+    }
+}
+
+void MqttPublishAllPowertimerState(void)
+{
+  for (uint32_t i = 1; i <= TasmotaGlobal.devices_present; i++) {
+    MqttPublishPowertimerState(i);
+  }
+}
+
 void MqttPublishPowerBlinkState(uint32_t device)
 {
   char scommand[33];
@@ -555,6 +584,7 @@ void MqttConnected(void)
     }
 
     MqttPublishAllPowerState();
+	MqttPublishAllPowertimerState();
     if (Settings.tele_period) {
       TasmotaGlobal.tele_period = Settings.tele_period -5;  // Enable TelePeriod in 5 seconds
     }

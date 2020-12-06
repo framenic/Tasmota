@@ -216,6 +216,8 @@
 #define D_RSLT_STATE "STATE"
 #define D_RSLT_UPTIME "UPTIME"
 #define D_RSLT_WARNING "WARNING"
+#define D_RSLT_POWERTIMER "POWERTIMER"
+
 
 #define D_LOG_SOME_SETTINGS_RESET "Some settings have been reset"
 
@@ -242,6 +244,7 @@
 #define D_CMND_FANSPEED "FanSpeed"
 #define D_CMND_POWERONSTATE "PowerOnState"
 #define D_CMND_PULSETIME "PulseTime"
+#define D_CMND_POWERTIMER "PowerTimer"
 #define D_CMND_BLINKTIME "BlinkTime"
 #define D_CMND_BLINKCOUNT "BlinkCount"
 #define D_CMND_SENSOR "Sensor"
@@ -753,6 +756,7 @@ const char S_RSLT_RESULT[] PROGMEM = D_RSLT_RESULT;
 const char S_RSLT_WARNING[] PROGMEM = D_RSLT_WARNING;
 const char S_LWT[] PROGMEM = D_LWT;
 const char S_LWT_OFFLINE[] PROGMEM = MQTT_LWT_OFFLINE;
+const char S_RSLT_POWERTIMER[] PROGMEM = D_RSLT_POWERTIMER;
 
 // support.ino
 static const char kMonthNames[] = D_MONTH3LIST;

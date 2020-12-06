@@ -19,7 +19,7 @@
 
 const char kTasmotaCommands[] PROGMEM = "|"  // No prefix
   D_CMND_BACKLOG "|" D_CMND_DELAY "|" D_CMND_POWER "|" D_CMND_STATUS "|" D_CMND_STATE "|" D_CMND_SLEEP "|" D_CMND_UPGRADE "|" D_CMND_UPLOAD "|" D_CMND_OTAURL "|"
-  D_CMND_SERIALLOG "|" D_CMND_RESTART "|" D_CMND_POWERONSTATE "|" D_CMND_PULSETIME "|" D_CMND_BLINKTIME "|" D_CMND_BLINKCOUNT "|" D_CMND_SAVEDATA "|"
+  D_CMND_SERIALLOG "|" D_CMND_RESTART "|" D_CMND_POWERONSTATE "|" D_CMND_PULSETIME "|" D_CMND_POWERTIMER "|" D_CMND_BLINKTIME "|" D_CMND_BLINKCOUNT "|" D_CMND_SAVEDATA "|"
   D_CMND_SO "|" D_CMND_SETOPTION "|" D_CMND_TEMPERATURE_RESOLUTION "|" D_CMND_HUMIDITY_RESOLUTION "|" D_CMND_PRESSURE_RESOLUTION "|" D_CMND_POWER_RESOLUTION "|"
   D_CMND_VOLTAGE_RESOLUTION "|" D_CMND_FREQUENCY_RESOLUTION "|" D_CMND_CURRENT_RESOLUTION "|" D_CMND_ENERGY_RESOLUTION "|" D_CMND_WEIGHT_RESOLUTION "|"
   D_CMND_MODULE "|" D_CMND_MODULES "|" D_CMND_GPIO "|" D_CMND_GPIOS "|" D_CMND_TEMPLATE "|" D_CMND_PWM "|" D_CMND_PWMFREQUENCY "|" D_CMND_PWMRANGE "|"
@@ -46,7 +46,7 @@ const char kTasmotaCommands[] PROGMEM = "|"  // No prefix
 
 void (* const TasmotaCommand[])(void) PROGMEM = {
   &CmndBacklog, &CmndDelay, &CmndPower, &CmndStatus, &CmndState, &CmndSleep, &CmndUpgrade, &CmndUpgrade, &CmndOtaUrl,
-  &CmndSeriallog, &CmndRestart, &CmndPowerOnState, &CmndPulsetime, &CmndBlinktime, &CmndBlinkcount, &CmndSavedata,
+  &CmndSeriallog, &CmndRestart, &CmndPowerOnState, &CmndPulsetime, &CmndPowertimer, &CmndBlinktime, &CmndBlinkcount, &CmndSavedata,
   &CmndSetoption, &CmndSetoption, &CmndTemperatureResolution, &CmndHumidityResolution, &CmndPressureResolution, &CmndPowerResolution,
   &CmndVoltageResolution, &CmndFrequencyResolution, &CmndCurrentResolution, &CmndEnergyResolution, &CmndWeightResolution,
   &CmndModule, &CmndModules, &CmndGpio, &CmndGpios, &CmndTemplate, &CmndPwm, &CmndPwmfrequency, &CmndPwmrange,
@@ -799,6 +799,62 @@ void CmndPulsetime(void)
     }
     ResponseJsonEnd();
   }
+}
+
+uint32_t ISO8601ToSeconds(char *iso8601str)
+{
+	uint32_t seconds=0;
+	char *token, *prev_token;
+	if (iso8601str[0]=='P') 
+		if (iso8601str[1]=='T') {
+		    prev_token = &iso8601str[2]; 
+		    token = strrchr(prev_token,'H');
+			if (token) { 
+				seconds += atoi(prev_token)*3600;
+				prev_token = token + 1;
+			}
+			else token = prev_token;
+			
+			token = strrchr(prev_token,'M');
+			if (token) { 
+				seconds += atoi(prev_token)*60;
+				prev_token = token + 1;
+			}
+			else token = prev_token;
+			
+			token = strrchr(prev_token,'S');
+			if (token) { 
+				seconds += atoi(prev_token);
+				prev_token = token + 1;
+			}
+			else token = prev_token;
+		}
+	return seconds;
+}
+
+void CmndPowertimer(void)
+{
+  if ((XdrvMailbox.index > 0) && (XdrvMailbox.index <= TasmotaGlobal.devices_present)) {
+    
+	if (XdrvMailbox.data[0]=='P') XdrvMailbox.payload = ISO8601ToSeconds(XdrvMailbox.data)/60;
+	
+	if ((XdrvMailbox.payload > 0) && (XdrvMailbox.payload < 65536)) {
+        if (XdrvMailbox.data[0] == '+') {
+			 SetPowerTimer(XdrvMailbox.index -1, GetPowerTimer(XdrvMailbox.index -1)+XdrvMailbox.payload);
+		}	
+		else SetPowerTimer(XdrvMailbox.index -1, XdrvMailbox.payload);
+		ExecuteCommandPower(XdrvMailbox.index, POWER_ON, SRC_IGNORE);
+    }
+    else if (XdrvMailbox.payload == 0) {
+	  ExecuteCommandPower(XdrvMailbox.index, POWER_OFF, SRC_IGNORE);
+    }
+	else MqttPublishPowertimerState(XdrvMailbox.index);
+	
+	ResponseClear();
+	
+  }
+  else if (0 == XdrvMailbox.index) {
+  }   
 }
 
 void CmndBlinktime(void)
