@@ -442,7 +442,11 @@ void SetPowerTimer(uint32_t index, uint32_t time)
 
 uint32_t GetPowerTimer(uint32_t index)
 {
-  long time = TimePassedSince(TasmotaGlobal.power_timer[index]);
+  long time;
+  
+  if (TasmotaGlobal.power_timer[index]==0) return 0; // if 0 timer is disabled
+  
+  time = TimePassedSince(TasmotaGlobal.power_timer[index]);
   if (time < 0) {
     time *= -1;
     return ((time / 60000)+1);
